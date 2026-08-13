@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Skool",
+    "slug": "skool",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/skool-logo.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/skool-logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FDFBF8"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.skool.app"
+    },
+    "android": {
+      "package": "com.skool.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/skool-logo.png",
+        "backgroundColor": "#FDFBF8"
+      }
+    },
+    "plugins": [
+      "expo-sqlite",
+      "expo-secure-store",
+      [
+        "expo-file-system",
+        {}
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": ""
+      }
+    }
+  }
+}
