@@ -1,42 +1,50 @@
-// src/utils/scheduleUtils.js
-//
-// Pure helpers for working with arrays of schedule rows (as returned by
-// scheduleRepository). No SQLite here — just sorting/grouping logic so
-// screens and services stay simple.
-
 import { DAYS_OF_WEEK } from './timeUtils';
 
+const DEFAULT_RANGE_START = 7 * 60; // 07:00 AM
+const DEFAULT_RANGE_END = 17 * 60; // 05:00 PM
+
 /**
- * Sorts schedule rows chronologically by start time.
+ * Determines the timetable's visible time range from the current
+ * schedules. Falls back to 07:00 AM–05:00 PM when there are none, and
+ * always expands (never shrinks below the default) to fit any class that
+ * starts earlier or ends later, rounded out to the nearest hour
+ * (spec section 13).
  */
-export function sortByStartTime(schedules) {
-  return [...schedules].sort((a, b) => a.start_time - b.start_time);
+export function getTimetableRange(schedules) {
+  if (!schedules || schedules.length === 0) {
+    return { start: DEFAULT_RANGE_START, end: DEFAULT_RANGE_END };
+  }
+
+  const earliestStart = Math.min(...schedules.map((s) => s.start_time));
+  const latestEnd = Math.max(...schedules.map((s) => s.end_time));
+
+  const start = Math.min(DEFAULT_RANGE_START, Math.floor(earliestStart / 60) * 60);
+  const end = Math.max(DEFAULT_RANGE_END, Math.ceil(latestEnd / 60) * 60);
+
+  return { start, end };
 }
 
 /**
- * Groups a flat list of schedule rows (one row per day, per
- * scheduleRepository's storage model) back into "classes" by group_id,
- * so the UI can show one card per class instead of one per day-row.
+ * Hour marks (in minutes-from-midnight) between a start/end range,
+ * inclusive of both ends — used to draw the grid's hour rows.
  */
-export function groupSchedulesByGroupId(schedules) {
-  const groups = new Map();
-
-  for (const row of schedules) {
-    if (!groups.has(row.group_id)) {
-      groups.set(row.group_id, {
-        groupId: row.group_id,
-        subjectName: row.subject_name,
-        startTime: row.start_time,
-        endTime: row.end_time,
-        days: [],
-      });
-    }
-    groups.get(row.group_id).days.push(row.day);
+export function getHourMarks(rangeStart, rangeEnd) {
+  const marks = [];
+  for (let m = rangeStart; m <= rangeEnd; m += 60) {
+    marks.push(m);
   }
+  return marks;
+}
 
-  const result = Array.from(groups.values());
-  result.forEach((group) => {
-    group.days.sort((a, b) => DAYS_OF_WEEK.indexOf(a) - DAYS_OF_WEEK.indexOf(b));
-  });
-  return result;
+/**
+ * Deterministically maps a subject name to one of the theme's schedule
+ * block tint indexes, so the same subject always gets the same shade
+ * across the whole grid.
+ */
+export function getTintIndexForSubject(subjectName, tintCount) {
+  let hash = 0;
+  for (let i = 0; i < subjectName.length; i++) {
+    hash = (hash * 31 + subjectName.charCodeAt(i)) % 997;
+  }
+  return hash % tintCount;
 }
