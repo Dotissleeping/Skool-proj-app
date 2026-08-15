@@ -1,5 +1,4 @@
-# Skool
-
+# Skool [![Docs](https://img.shields.io/badge/docs-Google%20Docs-4285F4?logo=googledocs&logoColor=white)](https://docs.google.com/document/d/19s0z23d8OkFJF1_H0eceZcDOvovKSCgYlj90cbhZJSM/edit?tab=t.0)
 Skool is a lightweight, offline-first Android app for students to manage
 their class schedule and access their school's web portals — all in one
 simple, fast app. No school account needed to use the schedule; portals
