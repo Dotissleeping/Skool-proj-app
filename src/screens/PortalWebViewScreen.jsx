@@ -2,12 +2,12 @@
 //
 // In-app WebView for a fixed school portal. Supports cookies/login
 // sessions, back navigation (including Android hardware back), refresh,
-// a loading indicator, and an error state with retry. Navigation outside
-// the portal's allowedDomains is blocked — this stays a scoped portal
-// viewer, not a general browser (spec section 21).
+// a loading indicator, an error state with retry, and file-download
+// detection that saves into the app's Downloads (spec sections 21-23).
+// Navigation outside the portal's allowedDomains is blocked.
 
 import React, { useRef, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, BackHandler } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, BackHandler, Alert } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -16,6 +16,7 @@ import AppHeader from '../components/AppHeader';
 import LoadingView from '../components/LoadingView';
 import { getPortalById } from '../config/portals';
 import { isUrlAllowed } from '../services/portalService';
+import { downloadFile } from '../services/downloadService';
 
 export default function PortalWebViewScreen({ navigation, route }) {
   const { theme } = useTheme();
@@ -26,6 +27,22 @@ export default function PortalWebViewScreen({ navigation, route }) {
   const [hasError, setHasError] = useState(false);
   const [canGoBack, setCanGoBack] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [downloading, setDownloading] = useState(false);
+
+  async function handleFileDownload(downloadUrl) {
+    setDownloading(true);
+    try {
+      const record = await downloadFile({ url: downloadUrl, sourcePortal: portal.name });
+      Alert.alert('Download Complete', `${record.filename} was saved to Downloads.`, [
+        { text: 'OK', style: 'cancel' },
+        { text: 'View Downloads', onPress: () => navigation.navigate('Downloads') },
+      ]);
+    } catch (error) {
+      Alert.alert('Download Failed', 'Please try again.');
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   const handleBack = useCallback(() => {
     if (canGoBack && webViewRef.current) {
@@ -129,10 +146,18 @@ export default function PortalWebViewScreen({ navigation, route }) {
             }}
             onNavigationStateChange={(navState) => setCanGoBack(navState.canGoBack)}
             onShouldStartLoadWithRequest={handleShouldStartLoad}
+            onFileDownload={({ nativeEvent }) => handleFileDownload(nativeEvent.downloadUrl)}
           />
           {loading ? (
             <View style={[styles.loadingOverlay, { backgroundColor: theme.colors.background }]}>
               <LoadingView label={`Loading ${portal.name}...`} />
+            </View>
+          ) : null}
+          {downloading ? (
+            <View style={[styles.downloadBanner, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+              <Text style={[theme.typography.bodySmall, { color: theme.colors.textPrimary }]}>
+                Downloading file...
+              </Text>
             </View>
           ) : null}
         </View>
@@ -165,5 +190,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
     letterSpacing: 0.4,
+  },
+  downloadBanner: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
   },
 });

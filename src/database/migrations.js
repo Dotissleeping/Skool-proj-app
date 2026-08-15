@@ -1,12 +1,3 @@
-// src/database/migrations.js
-//
-// Creates/upgrades the SQLite schema on startup. Uses PRAGMA user_version
-// as a simple migration counter — each migration bumps it by 1, and only
-// migrations above the current version run, so this is safe to call every
-// app launch.
-
-import { getDatabase } from './database';
-
 const MIGRATIONS = [
   // v1: schedules + settings tables
   `
@@ -29,30 +20,17 @@ const MIGRATIONS = [
       value TEXT
     );
   `,
+  // v2: downloads metadata table (spec section 25). The actual PDF/DOCX
+  // bytes live in app file storage, NOT here — this is metadata only.
+  `
+    CREATE TABLE IF NOT EXISTS downloads (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      filename TEXT NOT NULL,
+      file_path TEXT NOT NULL,
+      mime_type TEXT,
+      file_size INTEGER,
+      download_date TEXT NOT NULL,
+      source_portal TEXT
+    );
+  `,
 ];
-
-/**
- * Runs any migrations newer than the database's current user_version.
- * Safe to call on every app startup.
- */
-export function runMigrations() {
-  const db = getDatabase();
-
-  const row = db.getFirstSync('PRAGMA user_version;');
-  const currentVersion = row ? row.user_version : 0;
-
-  for (let version = currentVersion; version < MIGRATIONS.length; version++) {
-    const sql = MIGRATIONS[version];
-    db.execSync(sql);
-    db.execSync(`PRAGMA user_version = ${version + 1};`);
-  }
-}
-
-/**
- * Full startup init: open the DB connection and bring the schema up to date.
- * Call this once, before reading/writing any schedule or settings data.
- */
-export function initDatabase() {
-  getDatabase();
-  runMigrations();
-}
