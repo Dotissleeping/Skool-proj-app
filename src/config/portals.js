@@ -9,14 +9,14 @@ export const PORTALS = [
   {
     id: 'student-portal',
     name: 'Student Portal',
-    url: 'https://example-student-portal.edu.ph/', // TODO: replace with real URL
-    allowedDomains: ['example-student-portal.edu.ph'], // TODO: replace
+    url: 'https://ueplms.orangeapps.ph/', // TODO: replace with real URL
+    allowedDomains: ['ueplms.orangeapps.ph'], // TODO: replace
   },
   {
     id: 'learning-portal',
     name: 'Learning Portal',
-    url: 'https://example-learning-portal.edu.ph/', // TODO: replace with real URL
-    allowedDomains: ['example-learning-portal.edu.ph'], // TODO: replace
+    url: 'https://uepcollege.acctech.ph/', // TODO: replace with real URL
+    allowedDomains: ['uepcollege.acctech.ph'], // TODO: replace
   },
 ];
 
