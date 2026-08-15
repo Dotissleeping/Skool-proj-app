@@ -78,6 +78,26 @@ export default function PortalWebViewScreen({ navigation, route }) {
     return isUrlAllowed(request.url, portal.allowedDomains);
   }
 
+  // onError/onHttpError fire for ANY resource on the page — not just the
+  // main document. A single broken image, font, or analytics pixel from
+  // a third-party CDN would otherwise trip the full "Unable to load
+  // portal" error screen even though the portal page itself loaded fine.
+  // Only treat it as a real failure if the failing request is actually
+  // on the portal's own domain.
+  function handleLoadFailure(failingUrl) {
+    if (!portal) {
+      setLoading(false);
+      setHasError(true);
+      return;
+    }
+    if (isUrlAllowed(failingUrl, portal.allowedDomains)) {
+      setLoading(false);
+      setHasError(true);
+    }
+    // else: sub-resource from an unrelated domain — ignore, let the page
+    // keep loading.
+  }
+
   if (!portal) {
     return (
       <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
@@ -136,14 +156,8 @@ export default function PortalWebViewScreen({ navigation, route }) {
             startInLoadingState={false}
             onLoadStart={() => setLoading(true)}
             onLoadEnd={() => setLoading(false)}
-            onError={() => {
-              setLoading(false);
-              setHasError(true);
-            }}
-            onHttpError={() => {
-              setLoading(false);
-              setHasError(true);
-            }}
+            onError={({ nativeEvent }) => handleLoadFailure(nativeEvent.url)}
+            onHttpError={({ nativeEvent }) => handleLoadFailure(nativeEvent.url)}
             onNavigationStateChange={(navState) => setCanGoBack(navState.canGoBack)}
             onShouldStartLoadWithRequest={handleShouldStartLoad}
             onFileDownload={({ nativeEvent }) => handleFileDownload(nativeEvent.downloadUrl)}
