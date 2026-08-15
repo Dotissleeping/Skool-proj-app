@@ -1,7 +1,7 @@
 // src/screens/SettingsScreen.jsx
 //
-// Appearance (theme), Student Information, Portal Login, Schedule/Downloads
-// clearing, and About — per spec section 26.
+// Appearance (theme), Student Information, Portal Login, Export/Import
+// Schedule, Schedule/Downloads clearing, and About — per spec section 26.
 
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Switch, ScrollView, Alert, StyleSheet } from 'react-native';
@@ -11,6 +11,7 @@ import { useSchedule } from '../hooks/useSchedule';
 import { useDownloads } from '../hooks/useDownloads';
 import { usePortalAuth } from '../hooks/usePortalAuth';
 import { getStudentName, setStudentName as persistStudentName } from '../database/settingsRepository';
+import { exportScheduleFile, importScheduleFile } from '../services/scheduleFileService';
 import { THEME_MODES } from '../theme/theme';
 import AppHeader from '../components/AppHeader';
 
@@ -30,7 +31,7 @@ function SectionLabel({ children, theme }) {
 
 export default function SettingsScreen({ navigation }) {
   const { theme, themeMode, setThemeMode } = useTheme();
-  const { clearAll: clearAllSchedule } = useSchedule();
+  const { classes, checkConflicts, addClass, clearAll: clearAllSchedule } = useSchedule();
   const { clearAll: clearAllDownloads } = useDownloads();
   const {
     saveLoginEnabled,
@@ -43,6 +44,8 @@ export default function SettingsScreen({ navigation }) {
   const [studentName, setStudentNameState] = useState('');
   const [portalUsername, setPortalUsername] = useState('');
   const [portalPassword, setPortalPassword] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   React.useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -98,6 +101,67 @@ export default function SettingsScreen({ navigation }) {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Clear', style: 'destructive', onPress: clearAllDownloads },
     ]);
+  }
+
+  async function handleExportSchedule() {
+    setExporting(true);
+    try {
+      await exportScheduleFile(classes);
+    } catch (error) {
+      Alert.alert('Export Failed', error.message);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleImportSchedule() {
+    setImporting(true);
+    try {
+      const incoming = await importScheduleFile();
+      if (!incoming) {
+        // user cancelled the file picker — do nothing
+        return;
+      }
+
+      let added = 0;
+      let skipped = 0;
+
+      for (const cls of incoming) {
+        const hasConflict = cls.days.some(
+          (day) =>
+            checkConflicts({
+              days: [day],
+              startTime: cls.startTime,
+              endTime: cls.endTime,
+            }).length > 0
+        );
+
+        if (hasConflict) {
+          skipped += 1;
+          continue;
+        }
+
+        addClass(cls);
+        added += 1;
+      }
+
+      if (added === 0) {
+        Alert.alert(
+          'Nothing Added',
+          `All ${skipped} class${skipped === 1 ? '' : 'es'} in that file conflicted with your existing schedule.`
+        );
+      } else {
+        Alert.alert(
+          'Schedule Imported',
+          `Added ${added} class${added === 1 ? '' : 'es'}.` +
+            (skipped > 0 ? ` Skipped ${skipped} due to time conflicts.` : '')
+        );
+      }
+    } catch (error) {
+      Alert.alert('Import Failed', error.message);
+    } finally {
+      setImporting(false);
+    }
   }
 
   return (
@@ -195,6 +259,30 @@ export default function SettingsScreen({ navigation }) {
           ) : null}
         </View>
 
+        {/* Export / Import Schedule */}
+        <SectionLabel theme={theme}>Schedule File</SectionLabel>
+        <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary, marginBottom: 12 }]}>
+            Export your schedule as a file to send to a classmate, or import a file they sent you to add their classes to yours.
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.smallButton, { backgroundColor: theme.colors.accent }]}
+            onPress={handleExportSchedule}
+            disabled={exporting}
+          >
+            <Text style={styles.smallButtonText}>{exporting ? 'PREPARING...' : 'EXPORT SCHEDULE'}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.smallButton, { backgroundColor: theme.colors.accent, marginTop: 10 }]}
+            onPress={handleImportSchedule}
+            disabled={importing}
+          >
+            <Text style={styles.smallButtonText}>{importing ? 'IMPORTING...' : 'IMPORT SCHEDULE FILE'}</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Schedule */}
         <SectionLabel theme={theme}>Schedule</SectionLabel>
         <TouchableOpacity
@@ -218,10 +306,13 @@ export default function SettingsScreen({ navigation }) {
         <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           <Text style={[theme.typography.subtitle, { color: theme.colors.textPrimary }]}>Skool</Text>
           <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary, marginTop: 4 }]}>
-            Version 1.0.0
+            Version 2.0.0
           </Text>
           <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary, marginTop: 10 }]}>
-            A lightweight personal school companion app.
+            Portal by UEP.
+          </Text>
+          <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary, marginTop: 4 }]}>
+            Application by Dotissleeping.
           </Text>
         </View>
       </ScrollView>
