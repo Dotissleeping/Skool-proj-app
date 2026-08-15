@@ -50,6 +50,16 @@ export function getTintIndexForSubject(subjectName, tintCount) {
 }
 
 /**
+ * Returns a new array of schedule rows sorted chronologically by
+ * start_time (ascending). Used to order today's classes and any other
+ * per-day schedule list before display.
+ */
+export function sortByStartTime(schedules) {
+  if (!schedules) return [];
+  return [...schedules].sort((a, b) => a.start_time - b.start_time);
+}
+
+/**
  * Groups flat schedule rows (one row per day) into one entry per class
  * (group_id), collecting all the days a class occurs on into a single
  * `days` array. This is what powers the `classes` list returned by
