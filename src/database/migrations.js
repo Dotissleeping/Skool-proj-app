@@ -1,3 +1,5 @@
+import { getDatabase } from './database';
+
 const MIGRATIONS = [
   // v1: schedules + settings tables
   `
@@ -20,8 +22,7 @@ const MIGRATIONS = [
       value TEXT
     );
   `,
-  // v2: downloads metadata table (spec section 25). The actual PDF/DOCX
-  // bytes live in app file storage, NOT here — this is metadata only.
+  // v2: downloads metadata table
   `
     CREATE TABLE IF NOT EXISTS downloads (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,3 +35,35 @@ const MIGRATIONS = [
     );
   `,
 ];
+
+export function initDatabase() {
+  const db = getDatabase();
+
+  // Create migrations tracker table
+  db.execSync(`
+    CREATE TABLE IF NOT EXISTS _migrations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      version INTEGER NOT NULL UNIQUE,
+      applied_at TEXT NOT NULL
+    );
+  `);
+
+  // Get current version
+  const lastMigration = db.getFirstSync(
+    `SELECT MAX(version) as version FROM _migrations;`
+  );
+  const currentVersion = lastMigration?.version ?? -1;
+
+  // Apply any pending migrations
+  db.withTransactionSync(() => {
+    MIGRATIONS.forEach((sql, index) => {
+      if (index > currentVersion) {
+        db.execSync(sql);
+        db.runSync(
+          `INSERT INTO _migrations (version, applied_at) VALUES (?, ?);`,
+          [index, new Date().toISOString()]
+        );
+      }
+    });
+  });
+}

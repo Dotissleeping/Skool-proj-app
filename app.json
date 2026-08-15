@@ -11,7 +11,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#FDFBF8"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.skool.app"
@@ -29,7 +31,9 @@
       [
         "expo-file-system",
         {}
-      ]
+      ],
+      "expo-asset",
+      "expo-font"
     ],
     "extra": {
       "eas": {
