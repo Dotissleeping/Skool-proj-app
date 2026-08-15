@@ -1,19 +1,29 @@
 // src/hooks/useTheme.js
 //
 // Provides the active theme (light/dark) to the whole app based on the
-// user's preference (Light / Dark / System). In later phases, `themeMode`
-// will be loaded from and persisted to SQLite via settingsRepository — for
-// now it lives in memory, defaulting to "system".
+// user's preference (Light / Dark / System), persisted to SQLite via
+// settingsRepository. The initial value is read synchronously on first
+// render — safe because App.jsx guarantees the database schema exists
+// before this ever mounts.
 
 import React, { createContext, useContext, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { themes, THEME_MODES } from '../theme/theme';
+import { getThemeMode, setThemeMode as persistThemeMode } from '../database/settingsRepository';
 
 const ThemeContext = createContext(null);
 
+function readInitialThemeMode() {
+  try {
+    return getThemeMode();
+  } catch (error) {
+    return THEME_MODES.SYSTEM;
+  }
+}
+
 export function ThemeProvider({ children }) {
   const systemScheme = useColorScheme(); // 'light' | 'dark' | null
-  const [themeMode, setThemeMode] = useState(THEME_MODES.SYSTEM);
+  const [themeMode, setThemeModeState] = useState(readInitialThemeMode);
 
   const resolvedMode = useMemo(() => {
     if (themeMode === THEME_MODES.SYSTEM) {
@@ -23,6 +33,15 @@ export function ThemeProvider({ children }) {
   }, [themeMode, systemScheme]);
 
   const theme = themes[resolvedMode];
+
+  function setThemeMode(mode) {
+    setThemeModeState(mode);
+    try {
+      persistThemeMode(mode);
+    } catch (error) {
+      console.error('Failed to save theme preference:', error);
+    }
+  }
 
   const value = useMemo(
     () => ({

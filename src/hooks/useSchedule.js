@@ -12,6 +12,7 @@ import {
   updateScheduleGroup,
   deleteScheduleGroup,
   findOverlappingSchedules,
+  clearAllSchedules,
 } from '../database/scheduleRepository';
 import { groupSchedulesByGroupId } from '../utils/scheduleUtils';
 
@@ -66,6 +67,11 @@ export function useSchedule() {
     refresh();
   }
 
+  function clearAll() {
+    clearAllSchedules();
+    refresh();
+  }
+
   function getClass(groupId) {
     const rows = getScheduleGroup(groupId);
     if (rows.length === 0) return null;
@@ -87,6 +93,7 @@ export function useSchedule() {
     addClass,
     updateClass,
     deleteClass,
+    clearAll,
     getClass,
   };
 }
