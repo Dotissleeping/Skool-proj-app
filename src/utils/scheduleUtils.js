@@ -48,3 +48,37 @@ export function getTintIndexForSubject(subjectName, tintCount) {
   }
   return hash % tintCount;
 }
+
+/**
+ * Groups flat schedule rows (one row per day) into one entry per class
+ * (group_id), collecting all the days a class occurs on into a single
+ * `days` array. This is what powers the `classes` list returned by
+ * useSchedule().
+ *
+ * NOTE: field names below (group_id, subject_name, start_time, end_time,
+ * day) assume getAllSchedules() returns snake_case columns straight from
+ * SQLite. If scheduleRepository.js maps them to camelCase before
+ * returning, these need to change to match — see the repository file.
+ */
+export function groupSchedulesByGroupId(schedules) {
+  if (!schedules || schedules.length === 0) return [];
+
+  const groupsMap = new Map();
+
+  for (const row of schedules) {
+    const existing = groupsMap.get(row.group_id);
+    if (existing) {
+      existing.days.push(row.day);
+    } else {
+      groupsMap.set(row.group_id, {
+        groupId: row.group_id,
+        subjectName: row.subject_name,
+        startTime: row.start_time,
+        endTime: row.end_time,
+        days: [row.day],
+      });
+    }
+  }
+
+  return Array.from(groupsMap.values());
+}
